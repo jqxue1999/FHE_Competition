@@ -1,0 +1,7 @@
+/app/
+/resnet/keys_exp1/
+/resnet/weights/
+/openfhe/keys/
+/openfhe/temp/
+/openfhe/temp_ans/
+/openfhe/data/
