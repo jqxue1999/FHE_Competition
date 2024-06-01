@@ -77,15 +77,6 @@ void CIFAR10CKKS::initCC(int test) {
         for (int i = 0; i < 10; i++)
             cout << res_clean[i] << " ";
         cout << endl;
-
-        /* Bootstrapping
-        vector<uint32_t> levelBudget = {3, 3};
-        vector<uint32_t> bsgsDim = {0, 0};
-
-        // Precomputation for Bootstrapping
-        m_cc->EvalBootstrapSetup(levelBudget, bsgsDim, num_slots);
-        m_cc->EvalBootstrapKeyGen(m_SecretKey, num_slots);
-        */
     }
 
 }
@@ -116,15 +107,6 @@ void CIFAR10CKKS::genCC() {
     vector<int32_t> rotations = {1, 2, 32, 33, 34, 64, 65, 66, 1024, 8192, 4096, 2048, 512, 256, 128, 16, 8, 4, -1, -2, -3, -4, -5, -6, -7, -8, -9, num_slots - 1024 * 16};
     m_cc->EvalRotateKeyGen(m_SecretKey, rotations);
     m_cc->EvalMultKeyGen(m_SecretKey);
-
-    /* Bootstrapping
-    std::vector<uint32_t> levelBudget = {3, 3};
-    std::vector<uint32_t> bsgsDim = {0, 0};
-
-    // Precomputation for Bootstrapping
-    m_cc->EvalBootstrapSetup(levelBudget, bsgsDim, num_slots);
-    m_cc->EvalBootstrapKeyGen(m_SecretKey, num_slots);
-    */
 
     cout << "Now serializing keys ..." << endl;
 
@@ -299,7 +281,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::model_conv3x16_relu7_conv16x16_relu7_conv16x16
 
     cout << "-------------------- Conv2  --------------------" << endl;
 
-    Ciphertext<DCRTPoly> res2 = conv2(res1, 1);
+    Ciphertext<DCRTPoly> res2 = conv16x16_1(res1, 1);
     store_res(res2, "../temp/conv2_res.txt");
     cout << "[Before Boot] Conv2 result level: " << res2->GetLevel() << endl;
     cout << "[Before Boot] Remaining level of Conv2 result: " << depth - res2->GetLevel() << endl;
@@ -314,7 +296,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::model_conv3x16_relu7_conv16x16_relu7_conv16x16
 
     cout << "-------------------- Conv3  --------------------" << endl;
 
-    Ciphertext<DCRTPoly> res3 = conv3(res2, 1);
+    Ciphertext<DCRTPoly> res3 = conv16x16_2(res2, 1);
     store_res(res3, "../temp/conv3_res.txt");
     cout << "[Before Boot] Conv3 result level: " << res3->GetLevel() << endl;
     cout << "[Before Boot] Remaining level of Conv3 result: " << depth - res3->GetLevel() << endl;
@@ -351,7 +333,7 @@ void CIFAR10CKKS::serializeOutput() {
 }
 
 
-Ciphertext<DCRTPoly> CIFAR10CKKS::conv3x16(const Ciphertext<DCRTPoly> &in, double scale, string weights_dir) {
+Ciphertext<DCRTPoly> CIFAR10CKKS::conv3x16(const Ciphertext<DCRTPoly> &in, double scale) {
     vector<Ciphertext<DCRTPoly>> c_rotations;
 
     c_rotations.push_back(in);
@@ -369,7 +351,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv3x16(const Ciphertext<DCRTPoly> &in, doubl
     for (int c = 0; c < 16; c++) {
         vector<Ciphertext<DCRTPoly>> k_rows;
         for (int k = 0; k < 9; k++) {
-            vector<double> weights = read_values_from_file(weights_dir + "/conv1-ch" + to_string(c) + "-k" + to_string(k) + ".bin", scale);
+            vector<double> weights = read_values_from_file(m_WeightsDir + "/conv1-ch" + to_string(c) + "-k" + to_string(k) + ".bin", scale);
             Plaintext encoded = encode(weights, in->GetLevel());
             k_rows.push_back(m_cc->EvalMult(c_rotations[k], encoded));
         }
@@ -381,10 +363,10 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv3x16(const Ciphertext<DCRTPoly> &in, doubl
         res = m_cc->EvalAdd(res, sum_shift);
         res = m_cc->EvalAdd(res, m_cc->EvalRotate(sum_shift, 1024));
 
-        Plaintext bias=  encode(read_values_from_file(weights_dir + "/conv1-ch" + to_string(c) + "-bias.bin", scale), res->GetLevel());
+        Plaintext bias=  encode(read_values_from_file(m_WeightsDir + "/conv1-ch" + to_string(c) + "-bias.bin", scale), res->GetLevel());
         res = m_cc->EvalAdd(res, bias);
 
-        Plaintext mask = encode(read_values_from_file(weights_dir + "/conv1-mask.bin", scale), res->GetLevel());
+        Plaintext mask = encode(read_values_from_file(m_WeightsDir + "/conv1-mask.bin", scale), res->GetLevel());
         res = m_cc->EvalMult(res, mask);
 
         if (c == 0) {
@@ -403,7 +385,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv3x16(const Ciphertext<DCRTPoly> &in, doubl
 }
 
 
-Ciphertext<DCRTPoly> CIFAR10CKKS::conv2(const Ciphertext<DCRTPoly> &in, double scale) {
+Ciphertext<DCRTPoly> CIFAR10CKKS::conv16x16_1(const Ciphertext<DCRTPoly> &in, double scale) {
     vector<Ciphertext<DCRTPoly>> c_rotations;
 
     c_rotations.push_back(in);
@@ -422,15 +404,14 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv2(const Ciphertext<DCRTPoly> &in, double s
         vector<Ciphertext<DCRTPoly>> k_rows;
 
         for (int k = 0; k < 9; k++) {
-            vector<double> weights = read_values_from_file(
-                    "../model_3_1/conv2-ch" + to_string(c) + "-k" + to_string(k) + ".bin", scale);
+            vector<double> weights = read_values_from_file(m_WeightsDir + "/conv2-ch" + to_string(c) + "-k" + to_string(k) + ".bin", scale);
             Plaintext encoded = encode(weights, in->GetLevel());
             k_rows.push_back(m_cc->EvalMult(c_rotations[k], encoded));
         }
         Ciphertext<DCRTPoly> sum = m_cc->EvalAddMany(k_rows);
         Ciphertext<DCRTPoly> res = sum->Clone();
 
-        Plaintext bias = encode(read_values_from_file("../model_3_1/conv2-ch" + to_string(c) + "-bias.bin", scale), res->GetLevel());
+        Plaintext bias = encode(read_values_from_file(m_WeightsDir + "/conv2-ch" + to_string(c) + "-bias.bin", scale), res->GetLevel());
         for (int i = 0; i < 16; i++) {
             if (i == 0) {
                 res = m_cc->EvalAdd(res, bias);
@@ -441,7 +422,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv2(const Ciphertext<DCRTPoly> &in, double s
             sum = sum_shift;
         }
 
-        Plaintext mask = encode(read_values_from_file("../model_3_1/conv2-mask.bin", scale), res->GetLevel());
+        Plaintext mask = encode(read_values_from_file(m_WeightsDir + "/conv2-mask.bin", scale), res->GetLevel());
         res = m_cc->EvalMult(res, mask);
 
         if (c == 0) {
@@ -457,7 +438,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv2(const Ciphertext<DCRTPoly> &in, double s
 }
 
 
-Ciphertext<DCRTPoly> CIFAR10CKKS::conv3(const Ciphertext<DCRTPoly> &in, double scale) {
+Ciphertext<DCRTPoly> CIFAR10CKKS::conv16x16_2(const Ciphertext<DCRTPoly> &in, double scale) {
     vector<Ciphertext<DCRTPoly>> c_rotations;
 
     c_rotations.push_back(in);
@@ -476,16 +457,14 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv3(const Ciphertext<DCRTPoly> &in, double s
         vector<Ciphertext<DCRTPoly>> k_rows;
 
         for (int k = 0; k < 9; k++) {
-            vector<double> weights = read_values_from_file(
-                    "../model_3_1/conv3-ch" + to_string(c) + "-k" + to_string(k) + ".bin", scale);
+            vector<double> weights = read_values_from_file(m_WeightsDir + "/conv3-ch" + to_string(c) + "-k" + to_string(k) + ".bin", scale);
             Plaintext encoded = encode(weights, in->GetLevel());
             k_rows.push_back(m_cc->EvalMult(c_rotations[k], encoded));
         }
         Ciphertext<DCRTPoly> sum = m_cc->EvalAddMany(k_rows);
         Ciphertext<DCRTPoly> res = sum->Clone();
 
-        Plaintext bias = encode(read_values_from_file("../model_3_1/conv3-ch" + to_string(c) + "-bias.bin", scale),
-                                res->GetLevel());
+        Plaintext bias = encode(read_values_from_file(m_WeightsDir + "/conv3-ch" + to_string(c) + "-bias.bin", scale), res->GetLevel());
         for (int i = 0; i < 16; i++) {
             if (i == 0) {
                 res = m_cc->EvalAdd(res, bias);
@@ -496,7 +475,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv3(const Ciphertext<DCRTPoly> &in, double s
             sum = sum_shift;
         }
 
-        Plaintext mask = encode(read_values_from_file("../model_3_1/conv3-mask.bin", scale), res->GetLevel());
+        Plaintext mask = encode(read_values_from_file(m_WeightsDir + "/conv3-mask.bin", scale), res->GetLevel());
         res = m_cc->EvalMult(res, mask);
 
         if (c == 0) {
@@ -516,7 +495,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::fc(const Ciphertext<DCRTPoly> &in, double scal
     vector<int> rolls = {8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
 
     for (int i = 0; i < 10; i++) {
-        vector<double> weights = read_values_from_file("../weights/model_square/fc-c" + to_string(i) + ".bin", scale);
+        vector<double> weights = read_values_from_file(m_WeightsDir + "/fc-c" + to_string(i) + ".bin", scale);
         Plaintext encoded = encode(weights, in->GetLevel());
 
         Ciphertext<DCRTPoly> current = m_cc->EvalMult(in, encoded);
@@ -524,8 +503,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::fc(const Ciphertext<DCRTPoly> &in, double scal
         for (int r: rolls)
             current = m_cc->EvalAdd(m_cc->EvalRotate(current, r), current);
 
-        Plaintext mask = encode(read_values_from_file("../weights/model_square/fc-mask.bin", scale), current->GetLevel());
-
+        Plaintext mask = encode(read_values_from_file(m_WeightsDir + "/fc-mask.bin", scale), current->GetLevel());
         if (i == 0)
             finalsum = m_cc->EvalMult(current, mask);
         else
@@ -533,7 +511,7 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::fc(const Ciphertext<DCRTPoly> &in, double scal
 
     }
 
-    Plaintext bias = encode(read_values_from_file("../weights/model_square/fc-bias.bin", scale), finalsum->GetLevel());
+    Plaintext bias = encode(read_values_from_file(m_WeightsDir + "/fc-bias.bin", scale), finalsum->GetLevel());
     finalsum = m_cc->EvalAdd(finalsum, bias);
 
     return finalsum;

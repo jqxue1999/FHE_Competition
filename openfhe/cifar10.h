@@ -31,6 +31,8 @@ class CIFAR10CKKS {
     string m_InputLocation;
     string m_OutputLocation;
 
+    string m_WeightsDir = "../Weights/model_square";
+
 public:
     int num_slots = 65536;
     int depth = 21;
@@ -56,9 +58,9 @@ public:
 
     Ciphertext<DCRTPoly> conv3x16(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> conv2(const Ciphertext<DCRTPoly> &in, double scale);
+    Ciphertext<DCRTPoly> conv16x16_1(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> conv3(const Ciphertext<DCRTPoly> &in, double scale);
+    Ciphertext<DCRTPoly> conv16x16_2(const Ciphertext<DCRTPoly> &in, double scale);
 
     Ciphertext<DCRTPoly> fc(const Ciphertext<DCRTPoly> &in, double scale);
 
