@@ -31,10 +31,10 @@ class CIFAR10CKKS {
     string m_InputLocation;
     string m_OutputLocation;
 
-    string m_WeightsDir = "../weights/conv3x8-full-90";
+    string m_WeightsDir = "../weights/conv3x16-full-100";
 
 public:
-    int num_slots = 8192;
+    int num_slots = 16384;
     int depth = 5;
 
     CIFAR10CKKS(string ccLocation, string pubKeyLocation, string multKeyLocation, string rotKeyLocation,string inputLocation, string outputLocation);
@@ -58,23 +58,17 @@ public:
 
     Ciphertext<DCRTPoly> conv3x16(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> conv3x4(const Ciphertext<DCRTPoly> &in, double scale);
-
     Ciphertext<DCRTPoly> conv3x8(const Ciphertext<DCRTPoly> &in, double scale);
 
     Ciphertext<DCRTPoly> fc16384x10(const Ciphertext<DCRTPoly> &in, double scale);
 
     Ciphertext<DCRTPoly> fc8192x10(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> fc4096x10(const Ciphertext<DCRTPoly> &in, double scale);
-
     Ciphertext<DCRTPoly> relu_square(const Ciphertext<DCRTPoly> &in);
 
     Ciphertext<DCRTPoly> model_conv3x16_square_fc(Ciphertext<DCRTPoly> &in);
 
     Ciphertext<DCRTPoly> model_conv3x8_square_fc(Ciphertext<DCRTPoly> &in);
-
-    Ciphertext<DCRTPoly> model_conv3x4_square_fc(Ciphertext<DCRTPoly> &in);
 
     void store_res(Ciphertext<DCRTPoly> res, string filename);
 
@@ -84,5 +78,5 @@ public:
 
     vector<vector<vector<double>>> readBinaryTensor3D(const string& filename, int dim1, int dim2, int dim3);
 
-    vector<vector<double>> readBinaryTensor2D(const string& filename, int dim1, int dim2)
+    vector<vector<double>> readBinaryTensor2D(const string& filename, int dim1, int dim2);
 };

@@ -28,8 +28,3 @@ else ()
 endif ()
 
 add_executable(app main.cpp cifar10.cpp Utils.h)
-
-add_executable(t_app t.cpp)
-
-#target_link_libraries(app PRIVATE nlohmann_json::nlohmann_json)
-#

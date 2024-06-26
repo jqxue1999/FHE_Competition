@@ -268,18 +268,9 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::model_conv3x8_square_fc(Ciphertext<DCRTPoly> &
     return res;
 }
 
-
-Ciphertext<DCRTPoly> CIFAR10CKKS::model_conv3x4_square_fc(Ciphertext<DCRTPoly> &in) {
-    Ciphertext<DCRTPoly> res1 = conv3x4(in, 1);
-    res1 = relu_square(res1);
-    Ciphertext<DCRTPoly> res = fc4096x10(res1, 1);
-
-    return res;
-}
-
 void CIFAR10CKKS::eval(){
     Ciphertext<DCRTPoly> in = m_cc->EvalMult(m_InputC, 1/255.0);
-    m_OutputC = model_conv3x8_square_fc(in);
+    m_OutputC = model_conv3x16_square_fc(in);
     store_res(m_OutputC, "../temp/fc_res.txt");
 }
 
@@ -414,56 +405,6 @@ Ciphertext<DCRTPoly> CIFAR10CKKS::conv3x8(const Ciphertext<DCRTPoly> &in, double
             finalsum = m_cc->EvalRotate(finalsum, 1024);
         }
     }
-
-    return finalsum;
-}
-
-Ciphertext<DCRTPoly> CIFAR10CKKS::conv3x4(const Ciphertext<DCRTPoly> &in, double scale) {
-    vector<Ciphertext<DCRTPoly>> c_rotations;
-
-    c_rotations.push_back(in);
-    c_rotations.push_back(m_cc->EvalRotate(in, 1));
-    c_rotations.push_back(m_cc->EvalRotate(in, 2));
-    c_rotations.push_back(m_cc->EvalRotate(in, 32));
-    c_rotations.push_back(m_cc->EvalRotate(in, 33));
-    c_rotations.push_back(m_cc->EvalRotate(in, 34));
-    c_rotations.push_back(m_cc->EvalRotate(in, 64));
-    c_rotations.push_back(m_cc->EvalRotate(in, 65));
-    c_rotations.push_back(m_cc->EvalRotate(in, 66));
-
-    Ciphertext<DCRTPoly> finalsum;
-
-    for (int c = 0; c < 4; c++) {
-        vector<Ciphertext<DCRTPoly>> k_rows;
-        for (int k = 0; k < 9; k++) {
-            vector<double> weights = read_values_from_file(m_WeightsDir + "/conv1-ch" + to_string(c) + "-k" + to_string(k) + ".bin", scale);
-            Plaintext encoded = encode(weights, in->GetLevel());
-            k_rows.push_back(m_cc->EvalMult(c_rotations[k], encoded));
-        }
-
-        Ciphertext<DCRTPoly> sum = m_cc->EvalAddMany(k_rows);
-        Ciphertext<DCRTPoly> res = sum->Clone();
-        Ciphertext<DCRTPoly> sum_shift = m_cc->EvalRotate(sum, 1024);
-
-        res = m_cc->EvalAdd(res, sum_shift);
-        res = m_cc->EvalAdd(res, m_cc->EvalRotate(sum_shift, 1024));
-
-        Plaintext bias = encode(read_values_from_file(m_WeightsDir + "/conv1-ch" + to_string(c) + "-bias.bin", scale), res->GetLevel());
-        res = m_cc->EvalAdd(res, bias);
-
-        Plaintext mask = encode(read_values_from_file(m_WeightsDir + "/conv1-mask.bin", scale), res->GetLevel());
-        res = m_cc->EvalMult(res, mask);
-
-        if (c == 0) {
-            finalsum = res->Clone();
-            finalsum = m_cc->EvalRotate(finalsum, 1024);
-        } else {
-            finalsum = m_cc->EvalAdd(finalsum, res);
-            finalsum = m_cc->EvalRotate(finalsum, 1024);
-        }
-    }
-    if (num_slots > 1024 * 4)
-        finalsum = m_cc->EvalRotate(finalsum, num_slots - 1024 * 4);
 
     return finalsum;
 }
