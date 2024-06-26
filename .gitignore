@@ -5,3 +5,9 @@
 /openfhe/temp/
 /openfhe/temp_ans/
 /openfhe/data/
+/app_baseline/
+/app_conv3x4/
+/app_conv3x16/
+/app_conv3x4_copy/
+/app3x4/
+/lattigo/

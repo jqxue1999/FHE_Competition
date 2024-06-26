@@ -31,11 +31,11 @@ class CIFAR10CKKS {
     string m_InputLocation;
     string m_OutputLocation;
 
-    string m_WeightsDir = "../Weights/model_square";
+    string m_WeightsDir = "../weights/conv3x8-full-90";
 
 public:
-    int num_slots = 65536;
-    int depth = 21;
+    int num_slots = 8192;
+    int depth = 5;
 
     CIFAR10CKKS(string ccLocation, string pubKeyLocation, string multKeyLocation, string rotKeyLocation,string inputLocation, string outputLocation);
     CIFAR10CKKS(string ccLocation, string pubKeyLocation, string secKeyLocation, string multKeyLocation, string rotKeyLocation,string inputLocation, string outputLocation, string mode);
@@ -58,26 +58,31 @@ public:
 
     Ciphertext<DCRTPoly> conv3x16(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> conv16x16_1(const Ciphertext<DCRTPoly> &in, double scale);
+    Ciphertext<DCRTPoly> conv3x4(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> conv16x16_2(const Ciphertext<DCRTPoly> &in, double scale);
+    Ciphertext<DCRTPoly> conv3x8(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> fc(const Ciphertext<DCRTPoly> &in, double scale);
+    Ciphertext<DCRTPoly> fc16384x10(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> relu7(const Ciphertext<DCRTPoly> &in, double scale);
+    Ciphertext<DCRTPoly> fc8192x10(const Ciphertext<DCRTPoly> &in, double scale);
 
-    Ciphertext<DCRTPoly> relu4(const Ciphertext<DCRTPoly> &in, double scale);
+    Ciphertext<DCRTPoly> fc4096x10(const Ciphertext<DCRTPoly> &in, double scale);
 
     Ciphertext<DCRTPoly> relu_square(const Ciphertext<DCRTPoly> &in);
 
-    Ciphertext<DCRTPoly> model_conv3x16_relu7_conv16x16_relu7_conv16x16_relu7_fc(Ciphertext<DCRTPoly> &in);
-
-    Ciphertext<DCRTPoly> model_conv3x16_relu7_fc(Ciphertext<DCRTPoly> &in);
-
     Ciphertext<DCRTPoly> model_conv3x16_square_fc(Ciphertext<DCRTPoly> &in);
+
+    Ciphertext<DCRTPoly> model_conv3x8_square_fc(Ciphertext<DCRTPoly> &in);
+
+    Ciphertext<DCRTPoly> model_conv3x4_square_fc(Ciphertext<DCRTPoly> &in);
 
     void store_res(Ciphertext<DCRTPoly> res, string filename);
 
-    vector<double> decrypt_tovector(const Ciphertext<DCRTPoly> &c, int slots);
+    vector<double> decrypt_to_vector(const Ciphertext<DCRTPoly> &c, int slots);
 
+    Ciphertext<DCRTPoly> fc4096x10_copy(const Ciphertext<DCRTPoly> &in, double scale);
+
+    vector<vector<vector<double>>> readBinaryTensor3D(const string& filename, int dim1, int dim2, int dim3);
+
+    vector<vector<double>> readBinaryTensor2D(const string& filename, int dim1, int dim2)
 };
